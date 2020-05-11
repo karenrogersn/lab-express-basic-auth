@@ -4,8 +4,18 @@ const createError = require('http-errors');
 const logger = require('morgan');
 const sassMiddleware = require('node-sass-middleware');
 const serveFavicon = require('serve-favicon');
+//importing express session and connect mongo
+const expressSession = require('express-session');
+const connectMongo = require('connect-mongo');
+const mongoose = require('mongoose');
+const deserializeUser = require('./middleware/deserializeuser');
+const routeGuard = require('./middleware/routeguard');
+
+const mongoStore = connectMongo(expressSession);
 
 const indexRouter = require('./routes/index');
+//importing the Authentication route
+const authenticationRouter = require('./routes/authentication');
 
 const app = express();
 
@@ -22,13 +32,46 @@ app.use(
   sassMiddleware({
     src: join(__dirname, 'public'),
     dest: join(__dirname, 'public'),
-    outputStyle: process.env.NODE_ENV === 'development' ? 'nested' : 'compressed',
+    outputStyle:
+      process.env.NODE_ENV === 'development' ? 'nested' : 'compressed',
     force: process.env.NODE_ENV === 'development',
-    sourceMap: true
+    sourceMap: true,
   })
 );
 
+//set up img visualization
+app.use(express.static(process.env.PWD + '/public/images'));
+
+app.use(
+  expressSession({
+    secret: '12345',
+    resave: true,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 15 * 24 * 60 * 60 * 1000,
+    },
+    store: new mongoStore({
+      mongooseConnection: mongoose.connection,
+      ttl: 60 * 60,
+    }),
+  })
+);
+
+app.use(deserializeUser);
 app.use('/', indexRouter);
+
+//this app.use has to be before the error handlebar
+app.use('/authentication', authenticationRouter);
+
+app.get('/main', routeGuard, (req, res) => {
+  console.log('user in main page after logging in');
+  res.render('main');
+});
+
+app.get('/private', routeGuard, (req, res) => {
+  console.log('user in private page after logging in');
+  res.render('private');
+});
 
 // Catch missing routes and forward to error handler
 app.use((req, res, next) => {

@@ -1,5 +1,8 @@
 require('dotenv').config();
 
+//adding imgs to private and main pages
+process.env.PWD = process.cwd();
+
 const app = require('./app');
 const mongoose = require('mongoose');
 
@@ -10,13 +13,13 @@ mongoose
   .connect(URI, {
     useNewUrlParser: true,
     useCreateIndex: true,
-    useUnifiedTopology: true
+    useUnifiedTopology: true,
   })
   .then(() => {
     app.set('port', PORT);
     const server = app.listen(PORT);
 
-    server.on('error', error => {
+    server.on('error', (error) => {
       const { syscall, port, code } = error;
       if (syscall === 'listen' && code === 'EADDRINUSE') {
         console.error(`Port ${port} is already in use`);
@@ -31,7 +34,7 @@ mongoose
       console.log(`Node server listening on ${PORT}`);
     });
   })
-  .catch(error => {
+  .catch((error) => {
     console.error(`There was an error connecting the database to URI "${URI}"`);
     console.log(error);
   });
